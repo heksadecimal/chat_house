@@ -1,7 +1,11 @@
 import time
 import socket
 from threading import Thread
+from colors import color
 from group import Group
+
+fg = color.fg
+reset = color.style.reset
 
 HOST = "localhost"
 PORT = 5500
@@ -37,7 +41,7 @@ ADMIN_ONLY = [
 
 
 def private_except_message(
-    username: str, client: socket, group: Group, message: str
+    username: str, _: socket.socket, group: Group, message: str
 ) -> None:
     """
     Function to handle private messages
@@ -57,7 +61,9 @@ def private_except_message(
             group.private_message(username, member, message)
 
 
-def private_message(username: str, client: socket, group: Group, message: str) -> None:
+def private_message(
+    username: str, _: socket.socket, group: Group, message: str
+) -> None:
     """
     Function to handle private messages
     :param username: sender
@@ -77,7 +83,9 @@ def private_message(username: str, client: socket, group: Group, message: str) -
             group.private_message(username, receiver, message)
 
 
-def special_message(username: str, client: socket, group: Group, message: str) -> None:
+def special_message(
+    username: str, client: socket.socket, group: Group, message: str
+) -> None:
     """
     Function to handle special messages (starting with '!')
     :param username: username of the sender
@@ -133,20 +141,20 @@ def special_message(username: str, client: socket, group: Group, message: str) -
 
     elif special == "accept":
         if group.type != "private":
-            client.send("This action is only viable in a private group")
+            client.send("This action is only viable in a private group".encode())
             return
 
         group.accept(message)
 
     elif special == "reject":
         if group.type != "private":
-            client.send("This action is only viable in a private group")
+            client.send("This action is only viable in a private group".encode())
             return
 
         group.reject(message)
 
 
-def listen(client: socket, username: str, group: Group):
+def listen(client: socket.socket, username: str, group: Group):
     """
     listening thread for the server
     :param client: socket object of the user
@@ -184,7 +192,7 @@ def listen(client: socket, username: str, group: Group):
             break
 
 
-def create_new_group(conn: socket, username: str, name: str) -> bool:
+def create_new_group(conn: socket.socket, username: str, name: str) -> bool:
     """
     create a new group object
     :param conn: socket object of the user
@@ -194,7 +202,9 @@ def create_new_group(conn: socket, username: str, name: str) -> bool:
     """
     secret = None
 
-    conn.send("Enter the type of group [open/secret/private]".encode())
+    conn.send(
+        f" {fg.orange} Enter the type of group [open/secret/private] {reset}".encode()
+    )
     gtype = conn.recv(BUFF_SIZE).decode()
 
     if gtype not in ["open", "secret", "private"]:
@@ -208,13 +218,13 @@ def create_new_group(conn: socket, username: str, name: str) -> bool:
         secret = conn.recv(BUFF_SIZE).decode()
 
     groups[name] = Group(name, username, conn, gtype, secret)
-    conn.send("Creation Successful\n".encode())
+    conn.send(f"{fg.green} Creation Successful{reset}\n".encode())
     conn.send(f"You're the admin of this new {gtype} group".encode())
 
     return True
 
 
-def service_user(conn: socket, username: str, group_name: str) -> None:
+def service_user(conn: socket.socket, username: str, group_name: str) -> None:
     """
     Function to allocate a new user to some group
     :param conn: socket object of client
@@ -239,7 +249,7 @@ def service_user(conn: socket, username: str, group_name: str) -> None:
     else:
 
         conn.send(
-            f'There is no group named "{group_name}". Would you like to create one? [y/n]'.encode()
+            f'{fg.red}There is no group named "{group_name}". Would you like to create one? [y/n]{reset}'.encode()
         )
         answer = conn.recv(BUFF_SIZE).decode()
 
@@ -255,28 +265,30 @@ def service_user(conn: socket, username: str, group_name: str) -> None:
     listen(conn, username, groups[group_name])
 
 
-def welcome_user(conn: socket, addr: tuple) -> None:
+def welcome_user(conn: socket.socket, addr: tuple) -> None:
     """
     Start the chat process
     :param conn: socket object of the client
     :param addr: ip adrress and port of the client
     :return:
     """
-    ok = False
     try:
-        conn.send("Welcome to chat_house!\nEnter you username:".encode())
+        conn.send(
+            f" {fg.lightblue} Welcome to chat_house!\nEnter you username: {reset}".encode()
+        )
         username = conn.recv(BUFF_SIZE).decode()
 
-        conn.send("Enter the name of the group you want to join:".encode())
+        conn.send(
+            f" {fg.purple} Enter the name of the group you want to join: {reset}".encode()
+        )
         group_name = conn.recv(BUFF_SIZE).decode()
-        ok = True
+        service_user(conn, username, group_name)
 
     except:
-        print(f"connection {addr} disappeared in midst of joining group")
+        print(
+            f"{fg.red} connection {addr} disappeared in midst of joining group {reset}"
+        )
         # print(f"[-] CONNECTION LOST TO {addr}")
-
-    if ok:
-        service_user(conn, username, group_name)
 
 
 def start_server() -> None:
