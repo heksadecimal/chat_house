@@ -29,7 +29,6 @@ def listen(sock):
                 kill(sock)
             print(data)
 
-
         except KeyboardInterrupt:
             sock.sendall("!quit".encode())
             kill(sock)
