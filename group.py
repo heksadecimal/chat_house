@@ -14,7 +14,7 @@ class Group:
     """
 
     def __init__(
-        self, name: str, admin: str, conn: socket, type: str, secret_key: str
+        self, name: str, admin: str, conn: socket.socket, type: str, secret_key=None
     ) -> None:
         """
 
@@ -34,12 +34,12 @@ class Group:
         self.members = set()
         self.members.add(admin)
 
-        self.muted_users = defaultdict(lambda: False)
+        self.muted_users = defaultdict(bool)
 
         self.waiting_users = set()
         self.waiting_clients = dict()
 
-        self.clients = defaultdict(bool)
+        self.clients = defaultdict(socket.socket)
         self.clients[admin] = conn
 
     # ---------------------------------------
@@ -55,7 +55,7 @@ class Group:
         except KeyError:
             return False
 
-    def _add_user(self, user: str, conn: socket) -> None:
+    def _add_user(self, user: str, conn: socket.socket) -> None:
         """
         function to add the desired user to the group
         :param user: name of the user to add
@@ -115,10 +115,10 @@ class Group:
         :param user: the user who wants to leave the group
         :return: None
         """
-        self.clients[user].send(f"{fg.red}You left the group {style.reset}".encode())
+        self.clients[user].send(f"{fg.red} You left the group {style.reset}".encode())
 
         self._remove_user(user)
-        quit_message = f"{fg.red}{user} left the group {style.reset}"
+        quit_message = f"{fg.red} {user} left the group {style.reset}"
         self.broadcast("", quit_message)
 
         if user == self.admin:
@@ -170,15 +170,15 @@ class Group:
         :return: None
         """
         users = users.strip()
-        users = users.split(",")
-        users = [i.strip() for i in users]
+        user_list = users.split(",")
+        user_list = [i.strip() for i in user_list]
         print(users)
         for user in users:
             if not self.muted_users[user] and user in self.members:
                 self.clients[user].send(
                     f"{fg.yellow} You were muted by {self.admin} {style.reset}".encode()
                 )
-                self.muted_users[user] = self.clients[user]
+                self.muted_users[user] = True
                 self.broadcast(
                     "", f"{fg.cyan}{user} was muted by {self.admin}{style.reset}"
                 )
@@ -190,10 +190,10 @@ class Group:
         :return: None
         """
         users = users.strip()
-        users = users.split(",")
-        users = [i.strip() for i in users]
+        userlist = users.split(",")
+        userlist = [i.strip() for i in userlist]
 
-        for user in users:
+        for user in userlist:
             if self.muted_users[user]:
                 self.broadcast(
                     "", f"{fg.lightblue}{user} was umuted by {self.admin}{style.reset}"
@@ -263,7 +263,7 @@ class Group:
         message = (
             f"SERVER: {fg.yellow} Currently waitng users are: {style.reset}".encode()
             + b", ".join(
-                [f"{fg.orange}{i.encode()}{style.reset}" for i in self.waiting_users]
+                [f"{fg.orange} i {style.reset}".encode() for i in self.waiting_users]
             )
         )
         self.clients[self.admin].sendall(message)
@@ -326,7 +326,7 @@ class Group:
         except:
             self.clients[self.admin].send("No such user in the waiting list".encode())
 
-    def private_accept(self, conn: socket, name: str) -> None:
+    def private_accept(self, conn: socket.socket, name: str) -> None:
         """
         Function to accept or reject a user trying to enter in a private group
         :param conn: socket
@@ -349,7 +349,7 @@ class Group:
     # | FUNCTIONS FOR SECRET ROOM           |
     # ---------------------------------------
 
-    def secret_accept(self, conn: socket, name: str) -> bool:
+    def secret_accept(self, conn: socket.socket, name: str) -> bool:
         """
         Function to accept or reject a user trying to enter in a secret group
         :param conn: socket
@@ -373,7 +373,7 @@ class Group:
     # | FUNCTIONS FOR OPEN ROOM             |
     # ---------------------------------------
 
-    def open_accept(self, conn: socket, name: str) -> None:
+    def open_accept(self, conn: socket.socket, name: str) -> None:
         """
         Function to accept a user trying to enter in a open group
         :param conn: socket
