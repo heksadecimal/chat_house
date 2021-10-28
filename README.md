@@ -40,4 +40,10 @@ python client.py
 - (*)   Only admin
 - (**)  Only admin and in a private group
 
-Enjoy :)
+Here are some screenshots:
+
+- User Heks
+![heks](imgs/heks.png)
+
+- User Jon
+![jon](imgs/jon.png)
